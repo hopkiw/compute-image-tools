@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package ospackage
+package guestpolicy
 
 import (
 	"fmt"
@@ -32,7 +32,7 @@ func runZypperRepositories(repos []*osconfigpb.ZypperRepository) (string, error)
 	defer os.RemoveAll(td)
 	testRepo := filepath.Join(td, "testRepo")
 
-	if err := zypperRepositories(repos, testRepo); err != nil {
+	if err := writeZypperRepos(repos, testRepo); err != nil {
 		return "", fmt.Errorf("error running zypperRepositories: %v", err)
 	}
 

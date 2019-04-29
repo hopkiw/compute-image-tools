@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package ospackage
+package guestpolicy
 
 import (
 	"bytes"
@@ -25,33 +25,42 @@ import (
 	"github.com/GoogleCloudPlatform/compute-image-tools/go/packages"
 )
 
-func googetRepositories(repos []*osconfigpb.GooRepository, repoFile string) error {
+var debArchiveTypeMap = map[osconfigpb.AptRepository_ArchiveType]string{
+	osconfigpb.AptRepository_DEB:     "deb",
+	osconfigpb.AptRepository_DEB_SRC: "deb-src",
+}
+
+func writeAptRepos(repos []*osconfigpb.AptRepository, repoFile string) error {
 	/*
 		# Repo file managed by Google OSConfig agent
-
-		- name: repo1-name
-		  url: https://repo1-url
-		- name: repo1-name
-		  url: https://repo2-url
+		deb http://repo1-url/ repo1 main
+		deb http://repo1-url/ repo2 main contrib non-free
 	*/
 	var buf bytes.Buffer
 	buf.WriteString("# Repo file managed by Google OSConfig agent\n")
 	for _, repo := range repos {
-		buf.WriteString(fmt.Sprintf("\n- name: %s\n", repo.Name))
-		buf.WriteString(fmt.Sprintf("  url: %s\n", repo.Url))
+		archiveType, ok := debArchiveTypeMap[repo.ArchiveType]
+		if !ok {
+			archiveType = "deb"
+		}
+		line := fmt.Sprintf("\n%s %s %s", archiveType, repo.Uri, repo.Distribution)
+		for _, c := range repo.Components {
+			line = fmt.Sprintf("%s %s", line, c)
+		}
+		buf.WriteString(line + "\n")
 	}
 
 	return writeIfChanged(buf.Bytes(), repoFile)
 }
 
-func googetChanges(packageInstalls, packageRemovals []*osconfigpb.Package) error {
+func updateAptPackages(packageInstalls, packageRemovals []*osconfigpb.Package) error {
 	var errs []string
 
-	installed, err := packages.InstalledGooGetPackages()
+	installed, err := packages.InstalledDebPackages()
 	if err != nil {
 		return err
 	}
-	updates, err := packages.GooGetUpdates()
+	updates, err := packages.AptUpdates()
 	if err != nil {
 		return err
 	}
@@ -59,25 +68,25 @@ func googetChanges(packageInstalls, packageRemovals []*osconfigpb.Package) error
 
 	if changes.packagesToInstall != nil {
 		logger.Infof("Installing packages %s", changes.packagesToInstall)
-		if err := packages.InstallGooGetPackages(changes.packagesToInstall); err != nil {
-			logger.Errorf("Error installing googet packages: %v", err)
-			errs = append(errs, fmt.Sprintf("error installing googet packages: %v", err))
+		if err := packages.InstallAptPackages(changes.packagesToInstall); err != nil {
+			logger.Errorf("Error installing apt packages: %v", err)
+			errs = append(errs, fmt.Sprintf("error installing apt packages: %v", err))
 		}
 	}
 
 	if changes.packagesToUpgrade != nil {
 		logger.Infof("Upgrading packages %s", changes.packagesToUpgrade)
-		if err := packages.InstallGooGetPackages(changes.packagesToUpgrade); err != nil {
-			logger.Errorf("Error upgrading googet packages: %v", err)
-			errs = append(errs, fmt.Sprintf("error upgrading googet packages: %v", err))
+		if err := packages.InstallAptPackages(changes.packagesToUpgrade); err != nil {
+			logger.Errorf("Error upgrading apt packages: %v", err)
+			errs = append(errs, fmt.Sprintf("error upgrading apt packages: %v", err))
 		}
 	}
 
 	if changes.packagesToRemove != nil {
 		logger.Infof("Removing packages %s", changes.packagesToRemove)
-		if err := packages.RemoveGooGetPackages(changes.packagesToRemove); err != nil {
-			logger.Errorf("Error removing googet packages: %v", err)
-			errs = append(errs, fmt.Sprintf("error removing googet packages: %v", err))
+		if err := packages.RemoveAptPackages(changes.packagesToRemove); err != nil {
+			logger.Errorf("Error removing apt packages: %v", err)
+			errs = append(errs, fmt.Sprintf("error removing apt packages: %v", err))
 		}
 	}
 

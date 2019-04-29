@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package ospackage
+package guestpolicy
 
 import (
 	"bytes"
@@ -25,42 +25,54 @@ import (
 	"github.com/GoogleCloudPlatform/compute-image-tools/go/packages"
 )
 
-var debArchiveTypeMap = map[osconfigpb.AptRepository_ArchiveType]string{
-	osconfigpb.AptRepository_DEB:     "deb",
-	osconfigpb.AptRepository_DEB_SRC: "deb-src",
-}
-
-func aptRepositories(repos []*osconfigpb.AptRepository, repoFile string) error {
+// TODO: Write repo_gpgcheck, pkg_gpgcheck, type
+func writeZypperRepos(repos []*osconfigpb.ZypperRepository, repoFile string) error {
 	/*
 		# Repo file managed by Google OSConfig agent
-		deb http://repo1-url/ repo1 main
-		deb http://repo1-url/ repo2 main contrib non-free
+		[repo1]
+		name: repo1-name
+		baseurl: https://repo1-url
+		enabled=1
+		gpgcheck=1
+		repo_gpgcheck=1
+		gpgkey=http://repo1-url/gpg
+		[repo2]
+		display_name: repo2-name
+		baseurl: https://repo2-url
+		enabled=1
+		gpgcheck=1
+		repo_gpgcheck=1
 	*/
 	var buf bytes.Buffer
 	buf.WriteString("# Repo file managed by Google OSConfig agent\n")
 	for _, repo := range repos {
-		archiveType, ok := debArchiveTypeMap[repo.ArchiveType]
-		if !ok {
-			archiveType = "deb"
+		buf.WriteString(fmt.Sprintf("\n[%s]\n", repo.Id))
+		if repo.DisplayName == "" {
+			buf.WriteString(fmt.Sprintf("name: %s\n", repo.Id))
+		} else {
+			buf.WriteString(fmt.Sprintf("name: %s\n", repo.DisplayName))
 		}
-		line := fmt.Sprintf("\n%s %s %s", archiveType, repo.Uri, repo.Distribution)
-		for _, c := range repo.Components {
-			line = fmt.Sprintf("%s %s", line, c)
+		buf.WriteString(fmt.Sprintf("baseurl: %s\n", repo.BaseUrl))
+		buf.WriteString("enabled=1\ngpgcheck=1\nrepo_gpgcheck=1\n")
+		if len(repo.GpgKeys) > 0 {
+			buf.WriteString(fmt.Sprintf("gpgkey=%s\n", repo.GpgKeys[0]))
+			for _, k := range repo.GpgKeys[1:] {
+				buf.WriteString(fmt.Sprintf("       %s\n", k))
+			}
 		}
-		buf.WriteString(line + "\n")
 	}
 
 	return writeIfChanged(buf.Bytes(), repoFile)
 }
 
-func aptChanges(packageInstalls, packageRemovals []*osconfigpb.Package) error {
+func updateZypperPackages(packageInstalls, packageRemovals []*osconfigpb.Package) error {
 	var errs []string
 
-	installed, err := packages.InstalledDebPackages()
+	installed, err := packages.InstalledRPMPackages()
 	if err != nil {
 		return err
 	}
-	updates, err := packages.AptUpdates()
+	updates, err := packages.ZypperUpdates()
 	if err != nil {
 		return err
 	}
@@ -68,25 +80,28 @@ func aptChanges(packageInstalls, packageRemovals []*osconfigpb.Package) error {
 
 	if changes.packagesToInstall != nil {
 		logger.Infof("Installing packages %s", changes.packagesToInstall)
-		if err := packages.InstallAptPackages(changes.packagesToInstall); err != nil {
-			logger.Errorf("Error installing apt packages: %v", err)
-			errs = append(errs, fmt.Sprintf("error installing apt packages: %v", err))
+		if err := packages.InstallZypperPackages(changes.packagesToInstall); err != nil {
+			errStr := fmt.Sprintf("Error installing zypper packages: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
 	}
 
 	if changes.packagesToUpgrade != nil {
 		logger.Infof("Upgrading packages %s", changes.packagesToUpgrade)
-		if err := packages.InstallAptPackages(changes.packagesToUpgrade); err != nil {
-			logger.Errorf("Error upgrading apt packages: %v", err)
-			errs = append(errs, fmt.Sprintf("error upgrading apt packages: %v", err))
+		if err := packages.InstallZypperPackages(changes.packagesToUpgrade); err != nil {
+			errStr := fmt.Sprintf("Error upgrading zypper packages: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
 	}
 
 	if changes.packagesToRemove != nil {
 		logger.Infof("Removing packages %s", changes.packagesToRemove)
-		if err := packages.RemoveAptPackages(changes.packagesToRemove); err != nil {
-			logger.Errorf("Error removing apt packages: %v", err)
-			errs = append(errs, fmt.Sprintf("error removing apt packages: %v", err))
+		if err := packages.RemoveZypperPackages(changes.packagesToRemove); err != nil {
+			errStr := fmt.Sprintf("Error removing zypper packages: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
 	}
 

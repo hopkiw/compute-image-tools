@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package ospackage
+package guestpolicy
 
 import (
 	"fmt"
@@ -32,7 +32,7 @@ func runYumRepositories(repos []*osconfigpb.YumRepository) (string, error) {
 	defer os.RemoveAll(td)
 	testRepo := filepath.Join(td, "testRepo")
 
-	if err := yumRepositories(repos, testRepo); err != nil {
+	if err := writeYumRepos(repos, testRepo); err != nil {
 		return "", fmt.Errorf("error running yumRepositories: %v", err)
 	}
 

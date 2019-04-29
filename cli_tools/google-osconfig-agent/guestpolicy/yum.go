@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package ospackage
+package guestpolicy
 
 import (
 	"bytes"
@@ -25,7 +25,7 @@ import (
 	"github.com/GoogleCloudPlatform/compute-image-tools/go/packages"
 )
 
-func yumRepositories(repos []*osconfigpb.YumRepository, repoFile string) error {
+func writeYumRepos(repos []*osconfigpb.YumRepository, repoFile string) error {
 	// TODO: Would it be easier to just use templates?
 	/*
 		# Repo file managed by Google OSConfig agent
@@ -65,7 +65,7 @@ func yumRepositories(repos []*osconfigpb.YumRepository, repoFile string) error {
 	return writeIfChanged(buf.Bytes(), repoFile)
 }
 
-func yumChanges(packageInstalls, packageRemovals []*osconfigpb.Package) error {
+func updateYumPackages(packageInstalls, packageRemovals []*osconfigpb.Package) error {
 	var errs []string
 
 	installed, err := packages.InstalledRPMPackages()
@@ -81,24 +81,27 @@ func yumChanges(packageInstalls, packageRemovals []*osconfigpb.Package) error {
 	if changes.packagesToInstall != nil {
 		logger.Infof("Installing packages %s", changes.packagesToInstall)
 		if err := packages.InstallYumPackages(changes.packagesToInstall); err != nil {
-			logger.Errorf("Error installing yum packages: %v", err)
-			errs = append(errs, fmt.Sprintf("error installing yum packages: %v", err))
+			errStr := fmt.Sprintf("Error installing yum packages: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
 	}
 
 	if changes.packagesToUpgrade != nil {
 		logger.Infof("Upgrading packages %s", changes.packagesToUpgrade)
 		if err := packages.InstallYumPackages(changes.packagesToUpgrade); err != nil {
-			logger.Errorf("Error upgrading yum packages: %v", err)
-			errs = append(errs, fmt.Sprintf("error upgrading yum packages: %v", err))
+			errStr := fmt.Sprintf("Error upgrading yum packages: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
 	}
 
 	if changes.packagesToRemove != nil {
 		logger.Infof("Removing packages %s", changes.packagesToRemove)
 		if err := packages.RemoveYumPackages(changes.packagesToRemove); err != nil {
-			logger.Errorf("Error removing yum packages: %v", err)
-			errs = append(errs, fmt.Sprintf("error removing yum packages: %v", err))
+			errStr := fmt.Sprintf("Error removing yum packages: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
 	}
 

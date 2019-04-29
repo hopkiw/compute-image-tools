@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package ospackage
+package guestpolicy
 
 import (
 	"fmt"
@@ -32,7 +32,7 @@ func runGooGetRepositories(repos []*osconfigpb.GooRepository) (string, error) {
 	defer os.RemoveAll(td)
 	testRepo := filepath.Join(td, "testRepo")
 
-	if err := googetRepositories(repos, testRepo); err != nil {
+	if err := writeGoogetRepos(repos, testRepo); err != nil {
 		return "", fmt.Errorf("error running googetRepositories: %v", err)
 	}
 

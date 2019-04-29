@@ -1,4 +1,4 @@
-//  Copyright 2018 Google Inc. All Rights Reserved.
+//  Copyright 2019 Google Inc. All Rights Reserved.
 //
 //  Licensed under the Apache License, Version 2.0 (the "License");
 //  you may not use this file except in compliance with the License.
@@ -12,8 +12,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-// Package ospackage configures OS packages based on osconfig API response.
-package ospackage
+// Package guestpolicy configures OS repos, installs or removes system packages,
+// and handles software recipes as directed by applicable guest policy objects.
+package guestpolicy
 
 import (
 	"bytes"
@@ -55,8 +56,11 @@ func run(ctx context.Context, res string) {
 		return
 	}
 
-	// We don't check the error from ospackage.SetConfig as all errors are already logged.
-	setConfig(resp)
+	if err = doPackages(resp); err != nil {
+		logger.Errorf("Package or repo errors: %v", err)
+		return
+	}
+	//doRecipes(resp)
 }
 
 // Run looks up osconfigs and applies them using tasker.Enqueue.
@@ -101,73 +105,108 @@ func lookupConfigs(ctx context.Context, client *osconfig.Client, resource string
 	return res, nil
 }
 
-func setConfig(res *osconfigpb.LookupConfigsResponse) error {
+func doPackages(res *osconfigpb.LookupConfigsResponse) error {
 	var errs []string
+
+	// Create repos.
+	// current logic is:
+	//   match type,
+	//   create repo,
+	//   get repo handle,
+	//   do packages
+	// new is:
+	//   if repos, pass repos to func or block
+	//   if packages, pass packages to func or block
+	//   if recipes, pass recipes to func or block
+	// where each func or block will:
+	//   iterate list
+	//   maybe make a list of matching upfront?
+	//   for each type we could support, iterate the desired packages and append to
+	//   installable
+	//   do packages/repos/recipes
+	// interim is recipe as osconfig
+	// does that wire here or top level?
 	if res.Goo != nil && packages.GooGetExists {
 		if _, err := os.Stat(config.GoogetRepoFilePath()); os.IsNotExist(err) {
-			logger.Debugf("Repo file does not exist, will create one...")
-			if err := os.MkdirAll(filepath.Dir(config.GoogetRepoFilePath()), 07550); err != nil {
-				logger.Errorf("Error creating repo file: %v", err)
-				errs = append(errs, fmt.Sprintf("error creating googet repo file: %v", err))
+			logger.Infof("Repo dir does not exist, will create it...")
+			if err := os.MkdirAll(filepath.Dir(config.GoogetRepoFilePath()), 0755); err != nil {
+				errStr := fmt.Sprintf("Error creating repo dir: %v", err)
+				logger.Errorf(errStr)
+				errs = append(errs, errStr)
 			}
 		}
-		if err := googetRepositories(res.Goo.Repositories, config.GoogetRepoFilePath()); err != nil {
-			logger.Errorf("Error writing googet repo file: %v", err)
-			errs = append(errs, fmt.Sprintf("error writing googet repo file: %v", err))
+		if err := writeGoogetRepos(res.Goo.Repositories, config.GoogetRepoFilePath()); err != nil {
+			errStr := fmt.Sprintf("Error writing googet repo file: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
-		if err := googetChanges(res.Goo.PackageInstalls, res.Goo.PackageRemovals); err != nil {
-			errs = append(errs, fmt.Sprintf("error performing googet changes: %v", err))
+		if err := updateGoogetPackages(res.Goo.PackageInstalls, res.Goo.PackageRemovals); err != nil {
+			errStr := fmt.Sprintf("Error performing googet changes: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
 	}
 
 	if res.Apt != nil && packages.AptExists {
 		if _, err := os.Stat(config.AptRepoFilePath()); os.IsNotExist(err) {
-			logger.Debugf("Repo file does not exist, will create one...")
-			if err := os.MkdirAll(filepath.Dir(config.AptRepoFilePath()), 07550); err != nil {
-				logger.Errorf("Error creating repo file: %v", err)
-				errs = append(errs, fmt.Sprintf("error creating apt repo file: %v", err))
+			logger.Infof("Repo dir does not exist, will create it...")
+			if err := os.MkdirAll(filepath.Dir(config.AptRepoFilePath()), 0755); err != nil {
+				errStr := fmt.Sprintf("Error creating repo file: %v", err)
+				logger.Errorf(errStr)
+				errs = append(errs, errStr)
 			}
 		}
-		if err := aptRepositories(res.Apt.Repositories, config.AptRepoFilePath()); err != nil {
-			logger.Errorf("Error writing apt repo file: %v", err)
-			errs = append(errs, fmt.Sprintf("error writing apt repo file: %v", err))
+		if err := writeAptRepos(res.Apt.Repositories, config.AptRepoFilePath()); err != nil {
+			errStr := fmt.Sprintf("Error writing apt repo file: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
-		if err := aptChanges(res.Apt.PackageInstalls, res.Apt.PackageRemovals); err != nil {
-			errs = append(errs, fmt.Sprintf("error performing apt changes: %v", err))
+		if err := updateAptPackages(res.Apt.PackageInstalls, res.Apt.PackageRemovals); err != nil {
+			errStr := fmt.Sprintf("error performing apt changes: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
 	}
 
 	if res.Yum != nil && packages.YumExists {
 		if _, err := os.Stat(config.YumRepoFilePath()); os.IsNotExist(err) {
-			logger.Debugf("Repo file does not exist, will create one...")
-			if err := os.MkdirAll(filepath.Dir(config.YumRepoFilePath()), 07550); err != nil {
-				logger.Errorf("Error creating repo file: %v", err)
-				errs = append(errs, fmt.Sprintf("error creating yum repo file: %v", err))
+			logger.Infof("Repo dir does not exist, will create it...")
+			if err := os.MkdirAll(filepath.Dir(config.YumRepoFilePath()), 0755); err != nil {
+				errStr := fmt.Sprintf("Error creating yum repo dir: %v", err)
+				logger.Errorf(errStr)
+				errs = append(errs, errStr)
 			}
 		}
-		if err := yumRepositories(res.Yum.Repositories, config.YumRepoFilePath()); err != nil {
-			logger.Errorf("Error writing yum repo file: %v", err)
-			errs = append(errs, fmt.Sprintf("error writing yum repo file: %v", err))
+		if err := writeYumRepos(res.Yum.Repositories, config.YumRepoFilePath()); err != nil {
+			errStr := fmt.Sprintf("Error writing yum repo file: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
-		if err := yumChanges(res.Yum.PackageInstalls, res.Yum.PackageRemovals); err != nil {
-			errs = append(errs, fmt.Sprintf("error performing yum changes: %v", err))
+		if err := updateYumPackages(res.Yum.PackageInstalls, res.Yum.PackageRemovals); err != nil {
+			errStr := fmt.Sprintf("Error performing yum changes: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
 	}
 
 	if res.Zypper != nil && packages.ZypperExists {
 		if _, err := os.Stat(config.ZypperRepoFilePath()); os.IsNotExist(err) {
-			logger.Debugf("Repo file does not exist, will create one...")
-			if err := os.MkdirAll(filepath.Dir(config.ZypperRepoFilePath()), 07550); err != nil {
-				logger.Errorf("Error creating repo file: %v", err)
-				errs = append(errs, fmt.Sprintf("error creating zypper repo file: %v", err))
+			logger.Infof("Repo dir does not exist, will create it...")
+			if err := os.MkdirAll(filepath.Dir(config.ZypperRepoFilePath()), 0755); err != nil {
+				errStr := fmt.Sprintf("Error creating repo dir: %v", err)
+				logger.Errorf(errStr)
+				errs = append(errs, errStr)
 			}
 		}
-		if err := zypperRepositories(res.Zypper.Repositories, config.ZypperRepoFilePath()); err != nil {
-			logger.Errorf("Error writing zypper repo file: %v", err)
-			errs = append(errs, fmt.Sprintf("error writing zypper repo file: %v", err))
+		if err := writeZypperRepos(res.Zypper.Repositories, config.ZypperRepoFilePath()); err != nil {
+			errStr := fmt.Sprintf("Error writing zypper repo file: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
-		if err := zypperChanges(res.Zypper.PackageInstalls, res.Zypper.PackageRemovals); err != nil {
-			errs = append(errs, fmt.Sprintf("error performing zypper changes: %v", err))
+		if err := updateZypperPackages(res.Zypper.PackageInstalls, res.Zypper.PackageRemovals); err != nil {
+			errStr := fmt.Sprintf("Error performing zypper changes: %v", err)
+			logger.Errorf(errStr)
+			errs = append(errs, errStr)
 		}
 	}
 
@@ -176,6 +215,33 @@ func setConfig(res *osconfigpb.LookupConfigsResponse) error {
 	}
 	return errors.New(strings.Join(errs, ",\n"))
 }
+
+/*
+func doRecipes(res *osconfigpb.LookupConfigsResponse) error {
+	var errs []string
+
+	for _, recipe := range res.Recipes {
+		if installedVersion, ok := installedRecipes[recipe.Name]; ok {
+			if installedVersion.Lower(recipe.Version) || installedVersion.Equals(recipe.Version) {
+				continue
+			}
+			if recipe.Status != recipes.UP_TO_DATE {
+				continue
+			}
+			if recipe.UpgradeSteps == nil {
+				continue
+			}
+			if err = upgrade(recipe); err != nil {
+				errs = append(errs, err)
+			}
+		} else {
+			if err = install(recipe); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+}
+*/
 
 func checksum(r io.Reader) hash.Hash {
 	hash := sha256.New()
