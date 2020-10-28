@@ -44,7 +44,7 @@
           "Licenses": [
             "projects/rhel-cloud/global/licenses/rhel-8-server"
           ],
-          "Description": "Red Hat, Red Hat Enterprise Linux, 8, x86_64 built on ${build_date}",
+          "Description": "Red Hat, Red Hat Enterprise Linux, 8, x86_64 built on ${build_date} from disk ${install_disk}",
           "Family": "rhel-8",
           "GuestOsFeatures": [
             "UEFI_COMPATIBLE",

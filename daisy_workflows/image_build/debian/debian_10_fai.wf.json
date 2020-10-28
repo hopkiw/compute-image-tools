@@ -1,7 +1,7 @@
 {
   "Name": "build-debian-10-fai",
   "Vars": {
-    "build_date": {"Value": "${DATE}", "Description": "Build datestamp used to version the image."},
+    "build_date": {"Value": "${TIMESTAMP}", "Description": "Build datestamp used to version the image."},
     "debian_cloud_images_version": {
       "Value": "afa7a3bb28dbb7a48be162ac138667ddce0a70b1",
       "Description": "The debian-cloud-images scripts git commit ID or branch to use."
@@ -48,7 +48,7 @@
           "RawDisk": {
             "Source": "${OUTSPATH}/root.tar.gz"
           },
-          "Description": "Debian, Debian GNU/Linux, 10 (buster), amd64 built on ${build_date}, supports Shielded VM features",
+          "Description": "Debian, Debian GNU/Linux, 10 (buster), amd64 built on ${build_date} from source ${OUTSPATH}/root.tar.gz",
           "Family": "debian-10",
           "Project": "${publish_project}",
           "NoCleanup": true,

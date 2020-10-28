@@ -43,7 +43,7 @@
           "Licenses": [
             "projects/rhel-cloud/global/licenses/rhel-6-server"
           ],
-          "Description": "Red Hat, Red Hat Enterprise Linux, 6, x86_64 built on ${build_date}",
+          "Description": "Red Hat, Red Hat Enterprise Linux, 6, x86_64 built on ${build_date} from disk ${install_disk}",
           "Family": "rhel-6",
           "Project": "${publish_project}",
           "NoCleanup": true,

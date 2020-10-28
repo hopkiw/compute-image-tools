@@ -43,7 +43,7 @@
           "Licenses": [
             "projects/centos-cloud/global/licenses/centos-8"
           ],
-          "Description": "CentOS, CentOS, 8, x86_64 built on ${build_date}",
+          "Description": "CentOS, CentOS, 8, x86_64 built on ${build_date} from disk ${install_disk}",
           "Family": "centos-8-uefi",
           "Project": "${publish_project}",
           "NoCleanup": true,
