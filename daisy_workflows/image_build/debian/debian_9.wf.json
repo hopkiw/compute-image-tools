@@ -43,7 +43,7 @@
           "RawDisk": {
             "Source": "${OUTSPATH}/root.tar.gz"
           },
-          "Description": "Debian, Debian GNU/Linux, 9 (stretch), amd64 built on ${build_date}",
+          "Description": "Debian, Debian GNU/Linux, 9 (stretch), amd64 built on ${build_date} from source ${OUTSPATH}/root.tar.gz",
           "Family": "debian-9",
           "Project": "${publish_project}",
           "NoCleanup": true,
