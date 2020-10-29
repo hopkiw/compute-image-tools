@@ -17,9 +17,9 @@
       "Value": "disk-centos-8",
       "Description": "Name of the disk to install onto."
     },
-    "publish_project": {
-      "Value": "${PROJECT}",
-      "Description": "A project to publish the resulting image to."
+    "publish_path": {
+      "Required": true,
+      "Description": "A path to publish the resulting image to."
     }
   },
   "Steps": {
@@ -35,27 +35,18 @@
         }
       }
     },
-    "create-image": {
-      "CreateImages": [
-        {
-          "Name": "centos-8-uefi-v${build_date}",
-          "SourceDisk": "${install_disk}",
-          "Licenses": [
-            "projects/centos-cloud/global/licenses/centos-8"
-          ],
-          "Description": "CentOS, CentOS, 8, x86_64 built on ${build_date} from disk ${install_disk}",
-          "Family": "centos-8-uefi",
-          "Project": "${publish_project}",
-          "NoCleanup": true,
-          "ExactName": true,
-          "GuestOsFeatures": [
-            "UEFI_COMPATIBLE"
-          ]
+    "export-image-from-disk": {
+      "Timeout": "60m",
+      "IncludeWorkflow": {
+        "../export/disk_export.wf.json",
+        "Vars": {
+          "destination": "${publish_path}",
+          "source_disk": "${install_disk}"
         }
-      ]
+      }
     }
   },
   "Dependencies": {
-    "create-image": ["build-centos"]
+    "export-image-from-disk": ["build-rhel"]
   }
 }
