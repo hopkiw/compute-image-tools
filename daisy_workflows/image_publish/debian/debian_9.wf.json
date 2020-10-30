@@ -1,0 +1,37 @@
+{
+  "Name": "publish-debian-9",
+  "Vars": {
+    "image_name": {
+      "Value": "debian-9-v${DATE}"
+    },
+    "publish_project": {
+      "Value": "${PROJECT}",
+      "Description": "A project to publish the resulting image to."
+    },
+    "source_path": {
+      "Required": true,
+      "Description": "Source URI for image build"
+    }
+  },
+  "Steps": {
+    "create-image": {
+      "CreateImages": [
+        {
+          "Name": "{image_name}",
+          "RawDisk": {
+            "Source": "${source_path}"
+          },
+          "Description": "Debian, Debian GNU/Linux, 9 (stretch), amd64 built on ${DATE}",
+          "Family": "debian-9",
+          "Project": "${publish_project}",
+          "NoCleanup": true,
+          "ExactName": true,
+          "GuestOsFeatures": ["VIRTIO_SCSI_MULTIQUEUE"],
+          "Licenses": [
+            "projects/debian-cloud/global/licenses/debian-9-stretch"
+          ]
+        }
+      ]
+    }
+  }
+}

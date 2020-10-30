@@ -6,9 +6,9 @@
       "Value": "https://github.com/hopkiw/bootstrap-vz/archive/master.zip",
       "Description": "The bootstrap-vz release to use."
     },
-    "publish_path": {
-      "Required": true,
-      "Description": "A path to publish the resulting image to."
+    "publish_project": {
+      "Value": "${PROJECT}",
+      "Description": "A project to publish the resulting image to."
     },
     "build_date": {
       "Value": "${TIMESTAMP}",
@@ -32,12 +32,32 @@
       "CopyGCSObjects": [
         {
           "Source": "${OUTSPATH}/root.tar.gz",
-          "Destination": "${publish_path}"
+          "Destination": "${OUTSPATH}/root.tar.gz"
+        }
+      ]
+    },
+    "create-image": {
+      "CreateImages": [
+        {
+          "Name": "debian-9-v${build_date}",
+          "RawDisk": {
+            "Source": "${OUTSPATH}/root.tar.gz"
+          },
+          "Description": "Debian, Debian GNU/Linux, 9 (stretch), amd64 built on ${build_date}",
+          "Family": "debian-9",
+          "Project": "${publish_project}",
+          "NoCleanup": true,
+          "ExactName": true,
+          "GuestOsFeatures": ["VIRTIO_SCSI_MULTIQUEUE"],
+          "Licenses": [
+            "projects/debian-cloud/global/licenses/debian-9-stretch"
+          ]
         }
       ]
     }
   },
   "Dependencies": {
-    "copy-gcs-object": ["build-debian-9"]
+    "copy-gcs-object": ["build-debian-9"],
+    "create-image": ["copy-gcs-object"]
   }
 }
