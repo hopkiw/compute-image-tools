@@ -38,7 +38,7 @@
     "export-image-from-disk": {
       "Timeout": "60m",
       "IncludeWorkflow": {
-        "../export/disk_export.wf.json",
+        "Path": "../export/disk_export.wf.json",
         "Vars": {
           "destination": "${publish_path}",
           "source_disk": "${install_disk}"
