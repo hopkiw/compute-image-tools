@@ -47,6 +47,6 @@
     }
   },
   "Dependencies": {
-    "export-image-from-disk": ["build-rhel"]
+    "export-image-from-disk": ["build-centos"]
   }
 }
