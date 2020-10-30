@@ -15,7 +15,7 @@
       "Description": "The Google Cloud Repo branch to use."
     },
     "publish_path": {
-      "Required": "True",
+      "Required": true,
       "Description": "A path to publish the resulting image to."
     }
   },
