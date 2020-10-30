@@ -17,7 +17,7 @@
     "create-image": {
       "CreateImages": [
         {
-          "Name": "{image_name}",
+          "Name": "${image_name}",
           "RawDisk": {
             "Source": "${source_path}"
           },
