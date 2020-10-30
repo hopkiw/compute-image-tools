@@ -18,7 +18,7 @@
       "Description": "Name of the disk to install onto."
     },
     "publish_path": {
-      "Required": true",
+      "Required": true,
       "Description": "A path to publish the resulting image to."
     }
   },
