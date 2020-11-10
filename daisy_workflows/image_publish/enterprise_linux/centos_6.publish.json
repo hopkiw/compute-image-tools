@@ -1,0 +1,50 @@
+{{/*
+  Template to publish CentOS images.
+  By default this template is setup to publish to the 'gce-image-builder'
+  project, the 'environment' variable can be used to publish to 'test', 'prod',
+  or 'staging'.
+  DeleteAfter is set to 180 days for all environments other than prod where no
+  time period is set.
+*/}}
+{
+  "Name": "centos",
+  "SourceGCSPath": "gs://gce-image-archive/centos",
+  {{$work_project := printf "%q" "gce-image-builder" -}}
+  {{$endpoint := `"https://www.googleapis.com/compute/beta/projects/"` -}}
+  {{$delete_after := `"24h*30*6"` -}}
+  {{if eq .environment "test" -}}
+  "WorkProject": {{$work_project}},
+  "PublishProject": "bct-prod-images",
+  "ComputeEndpoint": {{$endpoint}},
+  "DeleteAfter": {{$delete_after}},
+  {{- else if eq .environment "prod" -}}
+  "WorkProject": {{$work_project}},
+  "PublishProject": "centos-cloud",
+  "ComputeEndpoint": {{$endpoint}},
+  {{- else if eq .environment "staging" -}}
+  "WorkProject": "bct-staging-images",
+  "PublishProject": "bct-staging-images",
+  "ComputeEndpoint": "https://www.googleapis.com/compute/cm_staging_beta/projects/",
+  "DeleteAfter": {{$delete_after}},
+  {{- else -}}
+  "WorkProject": {{$work_project}},
+  "PublishProject": {{$work_project}},
+  "ComputeEndpoint": {{$endpoint}},
+  "DeleteAfter": {{$delete_after}},
+  {{- end}}
+  {{$time := trimPrefix .publish_version "v"}}
+  "Images": [
+    {
+      "Prefix": "centos-6",
+      "Family": "centos-6",
+      "Description": "CentOS, CentOS, 6, x86_64 built on {{$time}}",
+      "Licenses": [
+        {{if eq .environment "staging" -}}
+        "projects/bct-staging-functional/global/licenses/centos-6"
+        {{- else -}}
+        "projects/centos-cloud/global/licenses/centos-6"
+        {{- end}}
+      ]
+    }
+  ]
+}
