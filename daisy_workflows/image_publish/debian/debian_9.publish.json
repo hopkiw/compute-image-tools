@@ -37,7 +37,7 @@
     {
       "Prefix": "debian-9-stretch",
       "Family": "debian-9",
-      "Description": "Debian, Debian GNU/Linux, 9 (stretch), amd64 built on {{$time}} from source {{$gcs_source}}",
+      "Description": "Debian, Debian GNU/Linux, 9 (stretch), amd64 built on {{$time}} from source {{.gcs_source}}",
       "Licenses": [
         {{if eq .environment "staging" -}}
         "projects/bct-staging-functional/global/licenses/debian-9-stretch"
