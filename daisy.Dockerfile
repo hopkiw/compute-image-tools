@@ -15,10 +15,15 @@
 # We use this image just for ca-certificates.crt
 FROM gcr.io/distroless/base
 
+FROM golang
+WORKDIR daisy/cli
+RUN go build
+
 FROM scratch
 
 COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY linux/daisy /daisy
+COPY --from=1 daisy/cli/daisy /daisy
 COPY /daisy_workflows/ /workflows/
 
+WORKDIR /
 ENTRYPOINT ["/daisy"]
