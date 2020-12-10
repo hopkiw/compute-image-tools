@@ -18,7 +18,7 @@ FROM gcr.io/distroless/base
 FROM scratch
 
 COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY linux/daisy /daisy
-COPY /daisy_workflows/ /workflows/
+COPY daisy/cli/daisy /daisy
+COPY daisy_workflows/ /workflows/
 
 ENTRYPOINT ["/daisy"]
