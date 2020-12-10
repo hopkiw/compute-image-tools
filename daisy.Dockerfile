@@ -13,17 +13,16 @@
 # limitations under the License.
 
 # We use this image just for ca-certificates.crt
-FROM gcr.io/distroless/base
+FROM busybox
+RUN cp -r . /workspace
 
 FROM golang
-#WORKDIR daisy/cli
-RUN pwd
-RUN find /
+WORKDIR /workspace/daisy/cli
 RUN go build
 
 FROM scratch
 
-COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=gcr.io/distroless/base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=1 daisy/cli/daisy /daisy
 COPY /daisy_workflows/ /workflows/
 
