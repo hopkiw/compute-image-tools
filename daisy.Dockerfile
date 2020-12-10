@@ -14,6 +14,9 @@
 
 # We use this image just for ca-certificates.crt
 FROM gcr.io/distroless/base
+RUN pwd
+RUN find .
+RUN ls /
 
 FROM golang
 #WORKDIR daisy/cli
