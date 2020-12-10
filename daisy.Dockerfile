@@ -16,7 +16,7 @@
 FROM gcr.io/distroless/base
 
 FROM golang
-WORKDIR daisy/cli
+#WORKDIR daisy/cli
 RUN find .
 RUN go build
 
