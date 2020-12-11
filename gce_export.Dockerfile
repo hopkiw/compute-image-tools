@@ -18,6 +18,6 @@ FROM gcr.io/distroless/base
 FROM scratch
 
 COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY linux/gce_export /gce_export
+COPY cli_tools/gce_export/gce_export /gce_export
 
 ENTRYPOINT ["/gce_export"]
